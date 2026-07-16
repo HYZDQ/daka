@@ -1045,6 +1045,12 @@
         <button class="editor-btn primary" id="editorSaveBtn">保存</button>
       </div>
     </div>
+ </div>
+
+  <!-- Test buttons -->
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <button onclick="playRingtone()" style="padding:5px 12px;border:1px solid #179670;border-radius:8px;background:#fff;color:#179670;font-size:12px;cursor:pointer">测试响铃</button>
+    <button onclick="vibrateDevice()" style="padding:5px 12px;border:1px solid #179670;border-radius:8px;background:#fff;color:#179670;font-size:12px;cursor:pointer">测试震动</button>
   </div>
 
  <div class="reset-area" id="resetBtnWrap">
@@ -1672,23 +1678,25 @@
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const t = ctx.currentTime;
-      [0, 0.08, 0.16].forEach(function(o, i) {
-        const osc = ctx.createOscillator();
-        const gn = ctx.createGain();
+      for (var i = 0; i < 9; i++) {
+        var o = i * 0.08;
+        var f = 660 + (i % 3) * 110;
+        var osc = ctx.createOscillator();
+        var gn = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(660 + i * 110, t + o);
+        osc.frequency.setValueAtTime(f, t + o);
         gn.gain.setValueAtTime(0.3, t + o);
         gn.gain.exponentialRampToValueAtTime(0.01, t + o + 0.1);
         osc.connect(gn);
         gn.connect(ctx.destination);
         osc.start(t + o);
         osc.stop(t + o + 0.1);
-      });
+      }
     } catch (_) {}
   }
 
   function vibrateDevice() {
-    try { if (navigator.vibrate) navigator.vibrate([800, 200, 800]); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate([800, 200, 800, 200, 800]); } catch (_) {}
   }
 
   // ──── Init ────
