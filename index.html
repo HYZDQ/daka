@@ -1672,23 +1672,23 @@
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const t = ctx.currentTime;
-      [0, 0.15, 0.3].forEach(function(o, i) {
+      [0, 0.08, 0.16].forEach(function(o, i) {
         const osc = ctx.createOscillator();
         const gn = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(660 + i * 110, t + o);
         gn.gain.setValueAtTime(0.3, t + o);
-        gn.gain.exponentialRampToValueAtTime(0.01, t + o + 0.3);
+        gn.gain.exponentialRampToValueAtTime(0.01, t + o + 0.1);
         osc.connect(gn);
         gn.connect(ctx.destination);
         osc.start(t + o);
-        osc.stop(t + o + 0.3);
+        osc.stop(t + o + 0.1);
       });
     } catch (_) {}
   }
 
   function vibrateDevice() {
-    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate([800, 200, 800]); } catch (_) {}
   }
 
   // ──── Init ────
