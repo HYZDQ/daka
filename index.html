@@ -1,0 +1,1701 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>每日打卡</title>
+<!--
+  Warm editorial palette based on provided reference:
+  - Body bg: #F5F3EE (warm beige)
+  - Card bg: #FFFFFF (pure white) with subtle shadow & 14px radius
+  - Title: #1A1A1A
+  - Body text: #666666
+  - Accent green: #179670 (button, check fill)
+  - Gradient accent: #53BC96 → #D4AA4F (teal → warm gold, vertical bar)
+  - Tag: bg #E6F4EF, text #208865
+  - Placeholder: #999999
+  - Divider: #F7F7F7
+  - Dashed border: #DDDDDD
+  - Rounded corners throughout, card shadows for depth
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI',
+      Roboto, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #F5F3EE;
+    color: #666666;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Decorative left gradient bar ── */
+  .deco-bar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 5px;
+    height: 100vh;
+    background: linear-gradient(to bottom, #53BC96 0%, #D4AA4F 100%);
+    z-index: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 500px;
+    padding: 32px 20px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Tag ── */
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #208865;
+    background: #E6F4EF;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+    margin-bottom: 12px;
+  }
+
+  /* ── Header ── */
+  .header-area {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .header-accent {
+    width: 4px;
+    height: 52px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #53BC96, #D4AA4F);
+    flex-shrink: 0;
+    margin-right: 14px;
+    margin-top: 2px;
+  }
+
+  .header-content {
+    flex: 1;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1A1A1A;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .folio-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .folio-date {
+    font-size: 12px;
+    color: #777777;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .date-nav button {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #E8E4DD;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #999999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .date-nav button:hover {
+    border-color: #179670;
+    color: #179670;
+    box-shadow: 0 2px 8px rgba(23, 150, 112, 0.1);
+  }
+
+  .date-nav button svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .btn-today {
+    display: none;
+    padding: 0 10px !important;
+    width: auto !important;
+    height: 24px !important;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #179670 !important;
+    background: #E6F4EF !important;
+    border-color: transparent !important;
+  }
+
+  .btn-today.visible { display: inline-flex; }
+
+  .readonly-badge {
+    display: none;
+    font-size: 10px;
+    color: #999999;
+    background: #F7F7F7;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .readonly-badge.visible { display: inline; }
+
+  /* ── Cards ── */
+  .card {
+    background: #FFFFFF;
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
+    margin-bottom: 12px;
+  }
+
+  /* ── Progress ── */
+  .progress-area {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .progress-ring-wrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+
+  .progress-ring-wrap svg {
+    transform: rotate(-90deg);
+    width: 56px;
+    height: 56px;
+  }
+
+  .progress-ring-bg {
+    fill: none;
+    stroke: #F0EDE8;
+    stroke-width: 3.5;
+  }
+
+  .progress-ring-fill {
+    fill: none;
+    stroke: #179670;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .progress-count {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1A1A1A;
+  }
+
+  .progress-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .progress-label {
+    font-size: 14px;
+    color: #666666;
+    line-height: 1.4;
+  }
+
+  .progress-label strong {
+    color: #1A1A1A;
+    font-weight: 600;
+  }
+
+  .progress-sub {
+    font-size: 12px;
+    color: #999999;
+  }
+
+  .all-done-badge {
+    display: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: #179670;
+  }
+
+  .all-done-badge.visible { display: inline; }
+
+  /* ── Add form ── */
+  .add-form {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-form input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px dashed #DDDDDD;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    background: #F9F8F6;
+    color: #1A1A1A;
+    transition: all 0.2s;
+  }
+
+  .add-form input:focus {
+    border-color: #179670;
+    border-style: solid;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(23, 150, 112, 0.08);
+  }
+
+  .add-form input::placeholder {
+    color: #999999;
+  }
+
+  .add-form button {
+    padding: 10px 20px;
+    background: #179670;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 8px rgba(23, 150, 112, 0.2);
+  }
+
+  .add-form button:hover {
+    background: #14805E;
+    box-shadow: 0 4px 12px rgba(23, 150, 112, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .add-form button:active {
+    transform: translateY(0);
+  }
+
+  .add-form.disabled { opacity: 0.35; pointer-events: none; }
+
+  /* ── Habit list card ── */
+  .habit-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 48px;
+  }
+
+  .habit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #F7F7F7;
+    transition: opacity 0.2s;
+  }
+
+  .habit-item:last-child {
+    border-bottom: none;
+  }
+
+  .habit-check {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #DDDDDD;
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+  }
+
+  .habit-check:hover {
+    border-color: #179670;
+    background: #F0F9F5;
+  }
+
+  .habit-check svg {
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+  }
+
+  .habit-check svg path {
+    stroke: #FFFFFF;
+    stroke-width: 2.5;
+    fill: none;
+    stroke-dasharray: 14;
+    stroke-dashoffset: 14;
+    transition: stroke-dashoffset 0.25s ease;
+    pointer-events: none;
+  }
+
+  .habit-check.checked {
+    background: #179670;
+    border-color: #179670;
+    box-shadow: 0 0 0 3px rgba(23, 150, 112, 0.15);
+  }
+
+  .habit-check.checked svg path {
+    stroke-dashoffset: 0;
+  }
+
+  .habit-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: #222222;
+    transition: color 0.25s;
+  }
+
+  .habit-name.done {
+    color: #999999;
+    text-decoration: line-through;
+    text-decoration-color: #DDDDDD;
+  }
+
+  .habit-delete {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: #DDDDDD;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    opacity: 0;
+  }
+
+  .habit-item:hover .habit-delete {
+    opacity: 1;
+  }
+
+  .habit-delete:hover {
+    background: #FEF2F2;
+    color: #EF4444;
+  }
+
+  .habit-delete svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 36px 20px;
+    color: #999999;
+  }
+
+  .empty-state .empty-icon {
+    display: block;
+    margin: 0 auto 10px;
+    width: 30px;
+    height: 30px;
+    color: #DDDDDD;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+  }
+
+  /* ── History ── */
+  .history-section {
+    margin-top: 4px;
+  }
+
+  .section-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #222222;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .yesterday-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .yesterday-card .label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #666666;
+  }
+
+  .yesterday-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .yesterday-dot.done {
+    background: #E6F4EF;
+    color: #179670;
+  }
+
+  .yesterday-dot.empty {
+    background: #F7F7F7;
+    color: #999999;
+  }
+
+  .yesterday-card .value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .yesterday-card .value .num {
+    color: #179670;
+  }
+
+  .week-grid {
+    display: flex;
+    gap: 4px;
+    padding: 10px 0 4px;
+    justify-content: center;
+  }
+
+  .week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    max-width: 48px;
+  }
+
+  .week-day .dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .week-day .dot.level-0 { background: #F5F3EE; color: #CCCCCC; }
+  .week-day .dot.level-1 { background: #E6F4EF; color: #53BC96; }
+  .week-day .dot.level-2 { background: #CDE8DD; color: #179670; }
+  .week-day .dot.level-3 { background: #A3D5C1; color: #0D6B4F; }
+  .week-day .dot.level-4 { background: #179670; color: #FFFFFF; }
+
+  .week-day .dot.today-dot {
+    box-shadow: 0 0 0 3px rgba(23, 150, 112, 0.2);
+  }
+
+  .week-day .day-label {
+    font-size: 10px;
+    color: #999999;
+    font-weight: 500;
+  }
+
+  .month-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .month-label-row span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .month-label-row .sub {
+    font-size: 11px;
+    color: #999999;
+    font-weight: 400;
+  }
+
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+
+  .month-grid .day-header {
+    text-align: center;
+    font-size: 10px;
+    color: #999999;
+    font-weight: 600;
+    padding-bottom: 6px;
+  }
+
+  .month-cell {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s;
+    color: #222222;
+  }
+
+  .month-cell.level-0 { background: #FAFAFA; color: #CCCCCC; }
+  .month-cell.level-1 { background: #E6F4EF; color: #53BC96; }
+  .month-cell.level-2 { background: #CDE8DD; color: #179670; }
+  .month-cell.level-3 { background: #A3D5C1; color: #0D6B4F; font-weight: 600; }
+  .month-cell.level-4 { background: #179670; color: #FFFFFF; font-weight: 700; }
+
+  .month-cell.today-cell {
+    box-shadow: 0 0 0 3px rgba(23, 150, 112, 0.2);
+  }
+
+  .month-cell.empty { background: transparent; }
+
+  .reset-area {
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  .reset-area button {
+    padding: 6px 16px;
+    border: 1px solid #E8E4DD;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #999999;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .reset-area button:hover {
+    border-color: #179670;
+    color: #179670;
+    background: #F0F9F5;
+  }
+
+  .reset-area.readonly { display: none; }
+
+  #fxCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  @media (max-width: 480px) {
+    .container { padding-top: 24px; }
+    .page-title { font-size: 22px; }
+   .card { padding: 14px 16px; }
+  }
+/* ── Reminder toggle ── */
+.reminder-toggle {
+  margin-top: 10px;
+  border-top: 1px solid #F0EDE8;
+  padding-top: 10px;
+}
+.reminder-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 13px;
+  color: #888888;
+  padding: 4px 2px;
+  user-select: none;
+  transition: color 0.15s;
+}
+.reminder-toggle-header:hover { color: #179670; }
+.reminder-toggle-header .arrow-icon {
+  transition: transform 0.2s ease;
+}
+.reminder-toggle-header.open .arrow-icon {
+  transform: rotate(180deg);
+}
+.reminder-body {
+  display: none;
+  padding: 10px 2px 4px;
+}
+.reminder-body.open { display: block; }
+.reminder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.reminder-row label {
+  font-size: 13px;
+  color: #666666;
+  min-width: 60px;
+}
+.reminder-row input[type="time"] {
+  padding: 6px 10px;
+  border: 1px solid #E0DDD8;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #333333;
+  background: #F9F8F6;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.reminder-row input[type="time"]:focus {
+  border-color: #179670;
+  background: #FFFFFF;
+}
+.reminder-switches {
+  display: flex;
+  gap: 6px;
+}
+.switch-btn {
+  padding: 5px 12px;
+  border: 1px solid #E0DDD8;
+  border-radius: 8px;
+  background: #F9F8F6;
+  font-size: 12px;
+  font-family: inherit;
+  color: #999999;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.switch-btn.active {
+  background: #E6F4EF;
+  border-color: #179670;
+  color: #179670;
+}
+.switch-btn:hover { border-color: #179670; }
+
+/* ── Habit bell ── */
+.habit-bell {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: #DDDDDD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s;
+  position: relative;
+}
+.habit-bell.has-reminder { color: #179670; }
+.habit-bell:hover {
+  background: #F0F9F5;
+  color: #179670;
+}
+.habit-bell svg { width: 16px; height: 16px; }
+.habit-bell .bell-tooltip {
+  display: none;
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333333;
+  color: #FFFFFF;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.habit-bell:hover .bell-tooltip { display: block; }
+
+/* ── Reminder toast ── */
+.reminder-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+  max-width: 320px;
+  transform: translateX(calc(100% + 40px));
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+.reminder-toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+.reminder-toast .toast-icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+.reminder-toast .toast-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 4px;
+}
+.reminder-toast .toast-text {
+  font-size: 13px;
+  color: #888888;
+  margin-bottom: 12px;
+}
+.reminder-toast .toast-btn {
+  padding: 6px 16px;
+  background: #179670;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.reminder-toast .toast-btn:hover { background: #14805E; }
+
+/* ── Reminder editor modal ── */
+.reminder-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0,0,0,0.15);
+  align-items: center;
+  justify-content: center;
+}
+.reminder-overlay.open { display: flex; }
+.reminder-editor {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  width: 280px;
+}
+.reminder-editor h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 14px;
+}
+.reminder-editor .editor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.reminder-editor .editor-row label {
+  font-size: 13px;
+  color: #666666;
+  min-width: 50px;
+}
+.reminder-editor .editor-row input[type="time"] {
+  padding: 6px 10px;
+  border: 1px solid #E0DDD8;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #333333;
+  background: #F9F8F6;
+  outline: none;
+  flex: 1;
+}
+.reminder-editor .editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.reminder-editor .editor-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reminder-editor .editor-btn.primary {
+  background: #179670;
+  color: #FFFFFF;
+}
+.reminder-editor .editor-btn.primary:hover { background: #14805E; }
+.reminder-editor .editor-btn.secondary {
+  background: #F5F3EE;
+  color: #666666;
+}
+.reminder-editor .editor-btn.secondary:hover { background: #EDE9E0; }
+.reminder-editor .editor-btn.danger {
+  background: #FEF2F2;
+  color: #EF4444;
+}
+.reminder-editor .editor-btn.danger:hover { background: #FEE2E2; }
+
+</style>
+</head>
+<body>
+
+<div class="deco-bar"></div>
+
+<canvas id="fxCanvas"></canvas>
+
+<div class="container" id="app">
+
+  <!-- Tag -->
+  <div class="tag">每日小目标</div>
+
+  <!-- Header -->
+  <div class="header-area">
+    <div class="header-accent"></div>
+    <div class="header-content">
+      <div class="header-top">
+        <h1 class="page-title">打卡</h1>
+        <div class="folio-row">
+          <span class="folio-date" id="folioDate"></span>
+          <div class="date-nav">
+            <button id="btnPrev" title="前一天">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7.5 2.5L4 6L7.5 9.5"/>
+              </svg>
+            </button>
+            <button id="btnNext" title="后一天">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.5 2.5L8 6L4.5 9.5"/>
+              </svg>
+            </button>
+            <button id="btnToday" class="btn-today">回到今天</button>
+            <span class="readonly-badge" id="readonlyBadge">只读</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress card -->
+  <div class="card">
+    <div class="progress-area" id="progressArea">
+      <div class="progress-ring-wrap">
+        <svg viewBox="0 0 56 56">
+          <circle class="progress-ring-bg" cx="28" cy="28" r="24" />
+          <circle class="progress-ring-fill" cx="28" cy="28" r="24" id="progressRing" />
+        </svg>
+        <div class="progress-count" id="progressCount">0</div>
+      </div>
+      <div class="progress-meta">
+        <div class="progress-label">
+          完成 <strong id="completedCount">0</strong> / <span id="totalCount">0</span> 项
+        </div>
+        <div class="progress-sub">
+          <span class="all-done-badge" id="allDoneBadge">今日全部完成</span>
+          <span id="remainingHint"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add form card -->
+ <div class="card">
+   <div class="add-form" id="addForm">
+     <input type="text" id="habitInput" placeholder="添加新习惯，比如 喝水" maxlength="24" />
+     <button id="addBtn">添加</button>
+   </div>
+    <div class="reminder-toggle" id="reminderToggle">
+      <div class="reminder-toggle-header" id="reminderToggleBtn">
+        <span>🔔 设置提醒（可选）</span>
+        <svg class="arrow-icon" viewBox="0 0 12 12" width="12" height="12">
+          <path d="M3 4.5L6 7.5L9 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="reminder-body" id="reminderBody">
+        <div class="reminder-row">
+          <label>提醒时间</label>
+          <input type="time" id="reminderTime" value="08:00" />
+        </div>
+        <div class="reminder-row">
+          <label>提醒方式</label>
+          <div class="reminder-switches">
+            <button class="switch-btn active" id="reminderSoundBtn">🔔 响铃</button>
+            <button class="switch-btn" id="reminderVibrateBtn">📳 震动</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habit list card -->
+  <div class="card">
+    <div class="habit-list" id="habitList">
+      <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 5V25M5 15H25"/>
+        </svg>
+        <p>还没有添加习惯</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="section-header">打卡记录</div>
+
+  <div class="card">
+    <div class="history-section" id="historySection">
+
+      <div class="yesterday-card" id="yesterdayCard">
+        <div class="label">
+          <span class="yesterday-dot" id="yesterdayIcon"></span>
+          <span>昨天</span>
+        </div>
+        <div class="value">已完成 <span class="num" id="yesterdayValue">0</span> 项</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section-header">最近 7 天</div>
+
+  <div class="card">
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <div class="month-label-row">
+    <span>近 30 天</span>
+    <span class="sub" id="monthSub"></span>
+  </div>
+
+  <div class="card">
+    <div class="month-grid" id="monthGrid"></div>
+  </div>
+
+  <!-- Reminder toast -->
+  <div class="reminder-toast" id="reminderToast">
+    <div class="toast-icon" id="toastIcon">💧</div>
+    <div class="toast-title" id="toastTitle">喝水</div>
+    <div class="toast-text">该打卡啦 ✨</div>
+    <button class="toast-btn" id="toastBtn">知道了</button>
+  </div>
+
+  <!-- Reminder editor -->
+  <div class="reminder-overlay" id="reminderOverlay">
+    <div class="reminder-editor">
+      <h4 id="editorTitle">设置提醒</h4>
+      <div class="editor-row">
+        <label>时间</label>
+        <input type="time" id="editorTime" value="08:00" />
+      </div>
+      <div class="editor-row">
+        <label>响铃</label>
+        <button class="switch-btn active" id="editorSoundBtn">🔔 开</button>
+      </div>
+      <div class="editor-row">
+        <label>震动</label>
+        <button class="switch-btn" id="editorVibrateBtn">📳 关</button>
+      </div>
+      <div class="editor-actions">
+        <button class="editor-btn danger" id="editorRemoveBtn">取消提醒</button>
+        <button class="editor-btn secondary" id="editorCancelBtn">取消</button>
+        <button class="editor-btn primary" id="editorSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+ <div class="reset-area" id="resetBtnWrap">
+    <button id="resetBtn">重置当天进度</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const STORAGE_KEY = 'daily_habits_v2';
+  const CIRCUMFERENCE = 2 * Math.PI * 24;
+  const DAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
+
+  // ──── Fireworks ────
+  const canvas = document.getElementById('fxCanvas');
+  const ctx = canvas.getContext('2d');
+  let fxList = [];
+  let fxAnimId = null;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  const FX_COLORS = [
+    '#179670', '#53BC96', '#D4AA4F', '#208865',
+    '#60A5FA', '#A78BFA', '#34D399', '#FFFFFF',
+    '#F472B6', '#FB923C', '#22D3EE', '#FBBF24',
+  ];
+
+  function fireRocket(lx, ly, vx, vy) {
+    fxList.push({
+      phase: 'launch',
+      x: lx, y: ly,
+      vx: vx, vy: vy,
+      trail: [],
+      explosion: null,
+    });
+  }
+
+  function fireFireworks(ox, oy) {
+    const n = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < n; i++) {
+      const lx = ox + (Math.random() - 0.5) * 60;
+      const ly = oy + (Math.random() - 0.5) * 30;
+      const vx = (Math.random() - 0.5) * 3;
+      const vy = -(6 + Math.random() * 5);
+      fireRocket(lx, ly, vx, vy);
+    }
+    if (!fxAnimId) loopFireworks();
+  }
+
+  function loopFireworks() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (const fw of fxList) {
+      if (fw.phase === 'launch') {
+        fw.x += fw.vx;
+        fw.y += fw.vy;
+        fw.vy += 0.22;
+
+        fw.trail.push({ x: fw.x, y: fw.y, life: 1 });
+        if (fw.trail.length > 25) fw.trail.shift();
+
+        if (fw.vy > 0.3 || fw.trail.length > 60) {
+          fw.phase = 'exploded';
+          const count = 35 + Math.floor(Math.random() * 30);
+          fw.explosion = [];
+
+          const goldenCount = 10;
+          for (let j = 0; j < goldenCount; j++) {
+            const a = (j / goldenCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+            const spd = 2.8 + Math.random() * 2.5;
+            fw.explosion.push(makeParticle(fw.x, fw.y, a, spd, '#D4AA4F', 2.8, 0.009));
+          }
+          for (let j = 0; j < count - goldenCount; j++) {
+            const a = Math.random() * Math.PI * 2;
+            const spd = 1.2 + Math.random() * 4.5;
+            const c = FX_COLORS[Math.floor(Math.random() * FX_COLORS.length)];
+            fw.explosion.push(makeParticle(fw.x, fw.y, a, spd, c, 2 + Math.random() * 3, 0.008 + Math.random() * 0.015));
+          }
+        }
+
+        for (let k = 0; k < fw.trail.length; k++) {
+          const t = fw.trail[k];
+          const alpha = (k / fw.trail.length) * 0.8;
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, 1.5 * (k / fw.trail.length) + 0.3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.fill();
+        }
+      }
+
+      if (fw.phase === 'exploded' && fw.explosion) {
+        for (const p of fw.explosion) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.10;
+          p.vx *= 0.99;
+          p.life -= p.decay;
+          const alpha = Math.max(0, p.life);
+
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+
+          if (p.life > 0.4) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * alpha * 3, 0, Math.PI * 2);
+            ctx.fillStyle = p.color + '25';
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+        fw.explosion = fw.explosion.filter(p => p.life > 0);
+      }
+    }
+
+    fxList = fxList.filter(fw => {
+      if (fw.phase === 'launch') return true;
+      return fw.phase === 'exploded' && fw.explosion && fw.explosion.length > 0;
+    });
+
+    if (fxList.length === 0) {
+      fxAnimId = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    fxAnimId = requestAnimationFrame(loopFireworks);
+  }
+
+  function makeParticle(x, y, angle, speed, color, size, decay) {
+    return {
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color, size, decay,
+      life: 1,
+    };
+  }
+
+  setTimeout(function() {
+    fireFireworks(window.innerWidth / 2 - 60, window.innerHeight * 0.7);
+    setTimeout(function() {
+      fireFireworks(window.innerWidth / 2 + 80, window.innerHeight * 0.6);
+    }, 400);
+  }, 600);
+
+  // ──── State ────
+  let viewDate = new Date();
+  viewDate.setHours(0,0,0,0);
+
+  function freshToday() {
+    const t = new Date();
+    t.setHours(0,0,0,0);
+    return t;
+  }
+
+  function dateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function isToday(d) {
+    return d.getTime() === freshToday().getTime();
+  }
+
+  // ──── Data ────
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+       const d = JSON.parse(raw);
+        if (d && typeof d === 'object' && Array.isArray(d.habits)) {
+          d.habits = d.habits.map(h => ({
+            reminderTime: null,
+            reminderSound: false,
+            reminderVibrate: false,
+            reminderShown: {},
+            ...h
+          }));
+          return d;
+        }
+      }
+    } catch (_) {}
+    return { habits: [], checkmarks: {} };
+  }
+
+  function saveData(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function getChecked(data, key) {
+    return data.checkmarks[key] || [];
+  }
+
+  function toggleCheck(data, key, habitId) {
+    const set = new Set(getChecked(data, key));
+    if (set.has(habitId)) set.delete(habitId);
+    else set.add(habitId);
+    data.checkmarks[key] = Array.from(set);
+    saveData(data);
+  }
+
+  function addHabit(data, name, reminder) {
+    const h = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      createdAt: Date.now(),
+      reminderTime: null,
+      reminderSound: false,
+      reminderVibrate: false,
+      reminderShown: {}
+    };
+    if (reminder) {
+      if (reminder.time) h.reminderTime = reminder.time;
+      if (reminder.sound !== undefined) h.reminderSound = reminder.sound;
+      if (reminder.vibrate !== undefined) h.reminderVibrate = reminder.vibrate;
+    }
+    data.habits.push(h);
+    saveData(data);
+  }
+
+  function deleteHabit(data, id) {
+    data.habits = data.habits.filter(h => h.id !== id);
+    for (const k of Object.keys(data.checkmarks)) {
+      data.checkmarks[k] = data.checkmarks[k].filter(hid => hid !== id);
+      if (data.checkmarks[k].length === 0) delete data.checkmarks[k];
+    }
+    saveData(data);
+  }
+
+  // ──── Helpers ────
+  function computeLevel(count, total) {
+    if (total === 0) return 0;
+    const ratio = count / total;
+    if (ratio === 0) return 0;
+    if (ratio <= 0.25) return 1;
+    if (ratio <= 0.5) return 2;
+    if (ratio < 1) return 3;
+    return 4;
+  }
+
+  function getLastNDates(n) {
+    const result = [];
+    const today = freshToday();
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      result.push(d);
+    }
+    return result;
+  }
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ──── Render ────
+  const $ = id => document.getElementById(id);
+
+  function renderAll() {
+    const data = loadData();
+    const vk = dateKey(viewDate);
+    const isTodayView = isToday(viewDate);
+    const checked = getChecked(data, vk);
+    const total = data.habits.length;
+    const done = checked.length;
+
+    // Date
+    const y = viewDate.getFullYear();
+    const m = viewDate.getMonth() + 1;
+    const d = viewDate.getDate();
+    const dowNames = ['日', '一', '二', '三', '四', '五', '六'];
+    const dowName = dowNames[viewDate.getDay()];
+    $('folioDate').textContent = y + '年' + m + '月' + d + '日 ' + dowName;
+
+    $('readonlyBadge').classList.toggle('visible', !isTodayView);
+    $('btnToday').classList.toggle('visible', !isTodayView);
+
+    const ring = $('progressRing');
+    ring.style.strokeDasharray = CIRCUMFERENCE;
+    const offset = total > 0 ? CIRCUMFERENCE * (1 - done / total) : CIRCUMFERENCE;
+    ring.style.strokeDashoffset = offset;
+
+    $('progressCount').textContent = total > 0 ? done : '0';
+    $('completedCount').textContent = done;
+    $('totalCount').textContent = total;
+
+    const badge = $('allDoneBadge');
+    badge.classList.toggle('visible', total > 0 && done === total);
+
+    const hint = $('remainingHint');
+    hint.textContent = (total > 0 && done < total) ? '还有 ' + (total - done) + ' 项未完成' : '';
+
+    $('addForm').classList.toggle('disabled', !isTodayView);
+    if (!isTodayView) $('habitInput').blur();
+    $('resetBtnWrap').classList.toggle('readonly', !isTodayView);
+
+    const list = $('habitList');
+    if (total === 0) {
+      list.innerHTML = '<div class="empty-state">' +
+        '<svg class="empty-icon" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M15 5V25M5 15H25"/>' +
+        '</svg><p>还没有添加习惯</p></div>';
+      renderHistory(data, 0);
+      return;
+    }
+
+    list.innerHTML = data.habits.map(h => {
+      const isChecked = checked.includes(h.id);
+      return '<div class="habit-item" data-id="' + h.id + '">' +
+        '<div class="habit-check' + (isChecked ? ' checked' : '') + '" data-action="toggle">' +
+        '<svg viewBox="0 0 12 12">' +
+        '<path d="M2 6 L5 9 L10 3" />' +
+        '</svg></div>' +
+        '<span class="habit-name' + (isChecked ? ' done' : '') + '">' + esc(h.name) + '</span>' +
+        '<span class="habit-bell' + (h.reminderTime ? ' has-reminder' : '') + '" data-action="edit-reminder" title="' + (h.reminderTime ? (h.reminderTime + ' 提醒') : '设置提醒') + '">' +
+        '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M8 1.5C6 1.5 4 3 4 6.5v2l-1.5 3h11L12 8.5v-2C12 3 10 1.5 8 1.5z"/>' +
+        '<path d="M6.5 13a1.5 1.5 0 0 0 3 0"/>' +
+        '</svg></span>' +
+        '<button class="habit-delete" data-action="delete" title="删除习惯">' +
+        '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">' +
+        '<path d="M3 3L11 11M11 3L3 11"/>' +
+        '</svg></button></div>';
+    }).join('');
+
+    renderHistory(data, total);
+  }
+
+  function renderHistory(data, habitTotal) {
+    const today = freshToday();
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yk = dateKey(yesterday);
+    const yChecked = getChecked(data, yk);
+    const yCount = yChecked.length;
+    $('yesterdayValue').textContent = yCount;
+    const yIcon = $('yesterdayIcon');
+    yIcon.textContent = yCount > 0 ? yCount : '–';
+    yIcon.className = 'yesterday-dot' + (yCount > 0 ? ' done' : ' empty');
+
+    const weekDays = getLastNDates(7);
+    const wg = $('weekGrid');
+    const todayTs = today.getTime();
+    wg.innerHTML = weekDays.map(d => {
+      const dk = dateKey(d);
+      const c = getChecked(data, dk);
+      const lv = computeLevel(c.length, habitTotal);
+      const isT = d.getTime() === todayTs;
+      return '<div class="week-day">' +
+        '<div class="dot level-' + lv + (isT ? ' today-dot' : '') + '">' + c.length + '</div>' +
+        '<span class="day-label">' + ['日','一','二','三','四','五','六'][d.getDay()] + '</span>' +
+        '</div>';
+    }).join('');
+
+    const monthDays = getLastNDates(30);
+    const mg = $('monthGrid');
+    const startDow = monthDays[0].getDay();
+    const emptyBefore = (startDow === 0) ? 6 : startDow - 1;
+
+    const startStr = monthDays[0].toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    const endStr = monthDays[monthDays.length-1].toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    $('monthSub').textContent = startStr + ' – ' + endStr;
+
+    let html = DAY_LABELS.map(n => '<div class="day-header">' + n + '</div>').join('');
+    for (let i = 0; i < emptyBefore; i++) html += '<div class="month-cell empty"></div>';
+
+    monthDays.forEach(d => {
+      const dk = dateKey(d);
+      const c = getChecked(data, dk);
+      const lv = computeLevel(c.length, habitTotal);
+      const isT = d.getTime() === todayTs;
+      html += '<div class="month-cell level-' + lv + (isT ? ' today-cell' : '') + '">' + d.getDate() + '</div>';
+    });
+
+    mg.innerHTML = html;
+  }
+
+  // ──── Events ────
+  $('btnPrev').addEventListener('click', function() {
+    viewDate.setDate(viewDate.getDate() - 1);
+    renderAll();
+  });
+
+  $('btnNext').addEventListener('click', function() {
+    const tomorrow = new Date(viewDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (tomorrow.getTime() > freshToday().getTime() + 86400000) return;
+    viewDate.setDate(viewDate.getDate() + 1);
+    renderAll();
+  });
+
+  $('btnToday').addEventListener('click', function() {
+    viewDate = freshToday();
+    renderAll();
+    $('habitInput').focus();
+  });
+
+  $('addBtn').addEventListener('click', addHabitAction);
+  $('habitInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addHabitAction();
+  });
+
+ function addHabitAction() {
+    if (!isToday(viewDate)) return;
+    const input = $('habitInput');
+    const name = input.value.trim();
+    if (!name) return;
+    const data = loadData();
+    const reminderTimeEl = $('reminderTime');
+    const reminder = reminderTimeEl ? {
+      time: reminderTimeEl.value,
+      sound: $('reminderSoundBtn').classList.contains('active'),
+      vibrate: $('reminderVibrateBtn').classList.contains('active')
+    } : null;
+    addHabit(data, name, reminder);
+    input.value = '';
+    input.focus();
+    const body = $('reminderBody');
+    const header = $('reminderToggleBtn');
+    if (body && header) {
+      body.classList.remove('open');
+      header.classList.remove('open');
+    }
+    renderAll();
+  }
+
+  $('habitList').addEventListener('click', function(e) {
+    const action = e.target.closest('[data-action]');
+    if (!action) return;
+    const item = action.closest('.habit-item');
+    if (!item) return;
+    const id = item.dataset.id;
+    const data = loadData();
+
+    if (action.dataset.action === 'toggle') {
+      if (!isToday(viewDate)) return;
+      const checked = getChecked(data, dateKey(viewDate));
+      const wasChecked = checked.includes(id);
+      const rect = action.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      toggleCheck(data, dateKey(viewDate), id);
+      renderAll();
+
+      if (!wasChecked) {
+        fireFireworks(cx, cy);
+      }
+      return;
+    }
+
+   if (action.dataset.action === 'delete') {
+      if (!isToday(viewDate)) return;
+      deleteHabit(data, id);
+      renderAll();
+    }
+    if (action.dataset.action === 'edit-reminder') {
+      const habit = data.habits.find(h => h.id === id);
+      if (!habit) return;
+      openReminderEditor(habit);
+    }
+  });
+
+  $('resetBtn').addEventListener('click', function() {
+    if (!isToday(viewDate)) return;
+    if (!confirm('确定要重置今天的打卡进度吗？')) return;
+    const data = loadData();
+    delete data.checkmarks[dateKey(viewDate)];
+    saveData(data);
+    renderAll();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.target.matches('input, textarea')) return;
+    if (e.key === 'ArrowLeft') {
+      viewDate.setDate(viewDate.getDate() - 1);
+      renderAll();
+    }
+    if (e.key === 'ArrowRight') {
+      const tomorrow = new Date(viewDate);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      if (tomorrow.getTime() > freshToday().getTime() + 86400000) return;
+      viewDate.setDate(viewDate.getDate() + 1);
+      renderAll();
+    }
+  });
+
+  // ──── Reminder event handlers ────
+  $('reminderToggleBtn').addEventListener('click', function() {
+    $('reminderBody').classList.toggle('open');
+    this.classList.toggle('open');
+  });
+
+  $('reminderSoundBtn').addEventListener('click', function() {
+    this.classList.toggle('active');
+    this.textContent = this.classList.contains('active') ? '🔔 响铃' : '🔔 静音';
+  });
+
+  $('reminderVibrateBtn').addEventListener('click', function() {
+    this.classList.toggle('active');
+    this.textContent = this.classList.contains('active') ? '📳 震动' : '📳 关';
+  });
+
+  $('toastBtn').addEventListener('click', function() {
+    $('reminderToast').classList.remove('show');
+  });
+
+  // ──── Reminder editor ────
+  let editingHabitId = null;
+
+  function openReminderEditor(habit) {
+    editingHabitId = habit.id;
+    $('editorTitle').textContent = '设置「' + habit.name + '」提醒';
+    $('editorTime').value = habit.reminderTime || '08:00';
+    const sBtn = $('editorSoundBtn');
+    const vBtn = $('editorVibrateBtn');
+    sBtn.classList.toggle('active', habit.reminderSound);
+    sBtn.textContent = habit.reminderSound ? '🔔 开' : '🔔 关';
+    vBtn.classList.toggle('active', habit.reminderVibrate);
+    vBtn.textContent = habit.reminderVibrate ? '📳 开' : '📳 关';
+    $('reminderOverlay').classList.add('open');
+  }
+
+  function closeReminderEditor() {
+    $('reminderOverlay').classList.remove('open');
+    editingHabitId = null;
+  }
+
+  $('editorSoundBtn').addEventListener('click', function() {
+    this.classList.toggle('active');
+    this.textContent = this.classList.contains('active') ? '🔔 开' : '🔔 关';
+  });
+  $('editorVibrateBtn').addEventListener('click', function() {
+    this.classList.toggle('active');
+    this.textContent = this.classList.contains('active') ? '📳 开' : '📳 关';
+  });
+
+  $('editorSaveBtn').addEventListener('click', function() {
+    if (!editingHabitId) return;
+    const data = loadData();
+    const h = data.habits.find(h => h.id === editingHabitId);
+    if (!h) return;
+    h.reminderTime = $('editorTime').value;
+    h.reminderSound = $('editorSoundBtn').classList.contains('active');
+    h.reminderVibrate = $('editorVibrateBtn').classList.contains('active');
+    if (h.reminderShown && h.reminderShown[dateKey(freshToday())]) {
+      delete h.reminderShown[dateKey(freshToday())];
+    }
+    saveData(data);
+    closeReminderEditor();
+    renderAll();
+  });
+
+  $('editorCancelBtn').addEventListener('click', closeReminderEditor);
+
+  $('reminderOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeReminderEditor();
+  });
+
+  $('editorRemoveBtn').addEventListener('click', function() {
+    if (!editingHabitId) return;
+    const data = loadData();
+    const h = data.habits.find(h => h.id === editingHabitId);
+    if (!h) return;
+    h.reminderTime = null;
+    h.reminderSound = false;
+    h.reminderVibrate = false;
+    saveData(data);
+    closeReminderEditor();
+    renderAll();
+  });
+
+  // ──── Reminder check ────
+  function startReminderCheck() {
+    checkReminders();
+    setInterval(checkReminders, 30000);
+  }
+
+  function checkReminders() {
+    const data = loadData();
+    const now = new Date();
+    const nowStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const todayKey = dateKey(freshToday());
+
+    data.habits.forEach(function(h) {
+      if (!h.reminderTime || h.reminderTime !== nowStr) return;
+      if (h.reminderShown && h.reminderShown[todayKey]) return;
+      if (!h.reminderShown) h.reminderShown = {};
+      h.reminderShown[todayKey] = true;
+      saveData(data);
+      showReminderToast(h);
+      if (h.reminderSound) playRingtone();
+      if (h.reminderVibrate) vibrateDevice();
+    });
+  }
+
+  function showReminderToast(habit) {
+    const toast = $('reminderToast');
+    const iconMap = { '喝':'💧','水':'💧','运':'🏃','动':'🏃','读':'📖','书':'📖','早':'🌅','睡':'🌙','写':'✍️','作':'✍️','冥':'🧘','想':'🧘','学':'📚','习':'📚','记':'📝','跑':'🏃','步':'🏃','瑜':'🧘','伽':'🧘','锻':'💪','炼':'💪' };
+    let icon = '✨';
+    for (const k in iconMap) { if (habit.name.includes(k)) { icon = iconMap[k]; break; } }
+    $('toastIcon').textContent = icon;
+    $('toastTitle').textContent = habit.name;
+    toast.classList.add('show');
+    if (toast._hideTimer) clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(function() { toast.classList.remove('show'); }, 6000);
+  }
+
+  function playRingtone() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const t = ctx.currentTime;
+      [0, 0.15, 0.3].forEach(function(o, i) {
+        const osc = ctx.createOscillator();
+        const gn = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660 + i * 110, t + o);
+        gn.gain.setValueAtTime(0.3, t + o);
+        gn.gain.exponentialRampToValueAtTime(0.01, t + o + 0.3);
+        osc.connect(gn);
+        gn.connect(ctx.destination);
+        osc.start(t + o);
+        osc.stop(t + o + 0.3);
+      });
+    } catch (_) {}
+  }
+
+  function vibrateDevice() {
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}
+  }
+
+  // ──── Init ────
+  startReminderCheck();
+  renderAll();
+  $('habitInput').focus();
+})();
+</script>
+</body>
+</html>
